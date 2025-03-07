@@ -6,6 +6,7 @@ import logging
 import datetime
 import os
 import re
+import ctypes
 PATH_LOG = 'd:\\files\\'
 
 
@@ -28,9 +29,36 @@ class KM_1C:
         :param f_path:
         """
         self.token = config('token_1C')
-        with open(f_path, 'r') as j_file:
-            self.km_dict = json.load(j_file)
+        try:
+            with open(f_path, 'r') as j_file:
+                self.km_dict = json.load(j_file)
+        except Exception as exs:
+            logging.debug(f'ошибка чтения словаря КМ {exs}')
+            self.km_dict = {}
         self.base_url = config('url')
+
+    def type_mark(self, tid: str = '222'):
+        """
+        запрос в 1с за типом маркировки товара
+        tid tID товара, какой-то айдишник в системе 1С, обычно это ШК
+        :return:
+        """
+        url = self.base_url + '/infotovar/' + tid
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic ' + self.token
+        }
+        try:
+            r = requests.get(url=url, headers=headers)
+        except Exception as exc:
+            logging.debug(f"ошибка запроса о типе маркировке {exc}")
+            ctypes.windll.user32.MessageBoxW(0, r.json()['message'], 'ошибка', 4096 + 16)
+        logging.debug(f"результат запроса о типе маркировке {r.text}")
+        if r.json().get('name', '') == '':
+            ctypes.windll.user32.MessageBoxW(0, 'ошибка получения типа маркировки', 'ошибка', 4096 + 16)
+            return 1111
+        mtype = r.json().get('marktype', 5408)
+        return mtype
 
     def new_mark(self):
         """
@@ -168,7 +196,9 @@ def main():
         mark.freemarkcontent_getpage(page=mark.km_dict.get('page', None))
     if argv[2] == 'freepoolclosepage':
         mark.freemarkcontent_closepage(page=mark.km_dict.get('page', None))
-
+    if argv[1] == 'typemark':
+        marktype = mark.type_mark(tid=argv[2])
+        exit(marktype)
 
 
 if __name__ == '__main__':
