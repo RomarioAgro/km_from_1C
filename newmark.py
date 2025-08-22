@@ -95,11 +95,12 @@ class KM_1C:
         decoded_text = 'пока ошибок нет'
         try:
             r = requests.post(url=url, headers=headers, json=param)
-            decoded_text = r.content.decode('utf-8')
+            r.raise_for_status()
         except Exception as exc:
+            decoded_text = r.content.decode('utf-8')
             logging.debug(f"ошибка запроса инфо о КМ {exc} {decoded_text}")
+            ctypes.windll.user32.MessageBoxW(0, decoded_text, 'ошибка', 4096 + 16)
             return 401
-        print(decoded_text)
         file_name = os.path.splitext(os.path.basename(argv[1]))[0]
         logging.debug(f"результат запроса инфо о КМ {decoded_text}")
         if r.status_code == 200:
